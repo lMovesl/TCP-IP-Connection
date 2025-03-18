@@ -1,5 +1,7 @@
 ﻿#include "Server.h"
 
+void error_message(const char* nameFunction);
+
 int main(int argc, char* arcv[])
 {
 	WSADATA wsaData;
@@ -12,17 +14,24 @@ int main(int argc, char* arcv[])
 
 	SOCKADDR_IN sockaddr;
 	sockaddr.sin_family = AF_INET;
-	sockaddr.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
 	sockaddr.sin_port = htons(1111);
+	if (inet_pton(AF_INET, "127.0.0.1", &sockaddr.sin_addr) <= 0)
+		error_message("inet_pton");
 
 	SOCKET sListen = socket(AF_INET, SOCK_STREAM, NULL);
-	bind(sListen, (SOCKADDR*)&sockaddr, sizeof(sockaddr));
-	listen(sListen, SOMAXCONN);
+	if (sListen == INVALID_SOCKET)
+		error_message("socket");
+
+	if (bind(sListen, (SOCKADDR*)&sockaddr, sizeof(sockaddr)) == SOCKET_ERROR)
+		error_message("bind");
+
+	if (listen(sListen, SOMAXCONN) == SOCKET_ERROR)
+		error_message("listen");
 
 	int sockSize = sizeof(sockaddr);
 	SOCKET newConnection = accept(sListen, (SOCKADDR*)&sockaddr, &sockSize);
 	if (newConnection == INVALID_SOCKET) {
-		std::cout << "Accept error\n";
+		error_message("accept");
 	}
 	else {
 		std::cout << "Client connected\n";
@@ -30,4 +39,10 @@ int main(int argc, char* arcv[])
 
 	system("pause");
 	return 0;
+}
+
+void error_message(const char* nameFunction) {
+	std::cout << nameFunction << "function failed with error = " << WSAGetLastError() << std::endl;
+	WSACleanup();
+	exit(EXIT_FAILURE);
 }

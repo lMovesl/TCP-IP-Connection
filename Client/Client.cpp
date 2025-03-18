@@ -1,5 +1,7 @@
 ﻿#include "Client.h"
 
+void error_message(const char* nameFunction);
+
 int main(int argc, char* arcv[])
 {
 	WSADATA wsaData;
@@ -13,17 +15,24 @@ int main(int argc, char* arcv[])
 	SOCKADDR_IN sockaddr;
 	sockaddr.sin_family = AF_INET;
 	sockaddr.sin_port = htons(1111);
-	inet_pton(AF_INET, "127.0.0.1", &sockaddr.sin_addr);
+	if (inet_pton(AF_INET, "127.0.0.1", &sockaddr.sin_addr) <= 0)
+		error_message("inet_pton");
 
 	SOCKET connection = socket(AF_INET, SOCK_STREAM, NULL);
-	if (connect(connection, (SOCKADDR*)&sockaddr, sizeof(sockaddr)) == SOCKET_ERROR) {
-		std::cout << "Failed connect to server!" << std::endl;
-		WSACleanup();
-		exit(EXIT_FAILURE);
-	}
+	if (connection == INVALID_SOCKET)
+		error_message("socket");
+
+	if (connect(connection, (SOCKADDR*)&sockaddr, sizeof(sockaddr)) == SOCKET_ERROR)
+		error_message("connect");
 
 	std::cout << "Connected to server\n";
 
 	system("pause");
 	return 0;
+}
+
+void error_message(const char* nameFunction) {
+	std::cout << nameFunction << "function failed with error = " << WSAGetLastError() << std::endl;
+	WSACleanup();
+	exit(EXIT_FAILURE);
 }
