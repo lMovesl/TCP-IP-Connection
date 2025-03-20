@@ -43,7 +43,7 @@ int main(int argc, char* arcv[])
 			Error_message("accept");
 		}
 		else {
-			std::cout << "Client " << curr_connections << " connected!\n";
+			std::cout << "Client \"user" << newConnection << "\" connected!\n";
 
 			connections.emplace_back(newConnection);
 			++curr_connections;
@@ -67,8 +67,8 @@ void Error_message(const char* nameFunction) {
 }
 
 void Client_handler(std::size_t index) {
-	std::size_t msg_lenght;
-	std::string sender = "Client " + index + ':';
+	std::size_t msg_lenght = 0;
+	std::size_t sender_lenght = 0;
 
 	while (true) {
 		recv(connections[index], (char *)&msg_lenght, sizeof(msg_lenght), NULL);
@@ -78,10 +78,16 @@ void Client_handler(std::size_t index) {
 
 		recv(connections[index], msg, msg_lenght + 1, NULL);
 		
+		std::string sender = "user" + std::to_string(connections[index]);
+		sender_lenght = sender.size();
+
 		for (size_t i = 0; i < curr_connections; ++i) {
 			if (i == index)
 				continue;
-			send(connections[i], sender.c_str(), sizeof(sender), NULL);
+
+			send(connections[i], (char *)&sender_lenght, sizeof(sender_lenght), NULL);
+			send(connections[i], sender.c_str(), sender_lenght, NULL);
+
 			send(connections[i], (char *)&msg_lenght, sizeof(msg_lenght), NULL);
 			send(connections[i], msg, msg_lenght, NULL);
 		}

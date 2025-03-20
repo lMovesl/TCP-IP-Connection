@@ -15,7 +15,7 @@ int main(int argc, char* arcv[])
 		exit(EXIT_FAILURE);
 	}
 
-	SOCKADDR_IN sockaddr;
+	SOCKADDR_IN sockaddr;	
 	sockaddr.sin_family = AF_INET;
 	sockaddr.sin_port = htons(1111);
 	if (inet_pton(AF_INET, "127.0.0.1", &sockaddr.sin_addr) <= 0)
@@ -28,7 +28,7 @@ int main(int argc, char* arcv[])
 	if (connect(connection, (SOCKADDR*)&sockaddr, sizeof(sockaddr)) == SOCKET_ERROR)
 		Error_message("connect");
 
-	std::cout << "Connected to server\n";
+	std::cout << "Client connected to server\n";
 
 	std::thread th(Client_handler);
 	th.detach();
@@ -55,17 +55,23 @@ void Error_message(const char* nameFunction) {
 }
 
 void Client_handler() {
-	std::size_t msg_lenght;
+	std::size_t msg_lenght = 0;
+	std::size_t sender_lenght = 0;
 
 	while (true) {
+		//sender
+		recv(connection, (char*)&sender_lenght, sizeof(sender_lenght), NULL);
+		char* sender = new char[sender_lenght + 1];
+		sender[sender_lenght] = '\0';
+		recv(connection, sender, sender_lenght, NULL);
+
+		//message
 		recv(connection, (char *)&msg_lenght, sizeof(msg_lenght), NULL);
-	
 		char* msg = new char[msg_lenght + 1];
 		msg[msg_lenght] = '\0';
-
 		recv(connection, msg, msg_lenght, NULL);
 		 
-		std::cout << msg << "\n";
+		std::cout << sender << ": " << msg << "\n";
 
 		delete[] msg;
 	}
