@@ -11,6 +11,7 @@ endif()
 
 project ("Client")
 
+include_directories("../utils")
 # Добавьте источник в исполняемый файл этого проекта.
 add_executable (Client "Client.cpp" "Client.h")
 

@@ -7,3 +7,7 @@
 #include <vector>
 #include <thread>
 #include <string>
+#include <mutex>
+
+void Error_message(const char* name_function);
+void Client_handler(SOCKET conn);

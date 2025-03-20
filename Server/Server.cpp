@@ -1,11 +1,8 @@
 ﻿#include "Server.h"
-#define MAX_CONNECTIONS 100
-
-void Error_message(const char* nameFunction);
-void Client_handler(std::size_t index);
 
 std::vector<SOCKET> connections;
-std::size_t curr_connections = 0;
+
+std::mutex mtx;
 
 int main(int argc, char* arcv[])
 {
@@ -35,61 +32,73 @@ int main(int argc, char* arcv[])
 
 	int sockSize = sizeof(sockaddr);
 	SOCKET newConnection;
-	
-	for (std::size_t i = 0; i < MAX_CONNECTIONS; ++i) {
- 		newConnection = accept(sListen, (SOCKADDR*)&sockaddr, &sockSize);
+
+	while (true) {
+		newConnection = accept(sListen, (SOCKADDR*)&sockaddr, &sockSize);
 
 		if (newConnection == INVALID_SOCKET) {
 			Error_message("accept");
 		}
 		else {
-			std::cout << "Client \"user" << newConnection << "\" connected!\n";
+			std::cout << "User" << newConnection << " connected!\n";
 
-			connections.emplace_back(newConnection);
-			++curr_connections;
-		
-			std::thread th(Client_handler, i);
+			{
+				std::lock_guard<std::mutex> lock(mtx);
+				connections.emplace_back(newConnection);
+			}
+
+			std::thread th(Client_handler, newConnection);
 			th.detach();
 		}
 	}
 
 	for (SOCKET conn : connections)
 		closesocket(conn);
+
 	WSACleanup();
 	system("pause");
 	return 0;
 }
 
-void Error_message(const char* nameFunction) {
-	std::cout << nameFunction << "function failed with error = " << WSAGetLastError() << std::endl;
+void Error_message(const char* name_function) {
+	std::cout << name_function << "function failed with error = " << WSAGetLastError() << std::endl;
 	WSACleanup();
 	exit(EXIT_FAILURE);
 }
 
-void Client_handler(std::size_t index) {
+void Client_handler(SOCKET conn) {
 	std::size_t msg_lenght = 0;
 	std::size_t sender_lenght = 0;
 
 	while (true) {
-		recv(connections[index], (char *)&msg_lenght, sizeof(msg_lenght), NULL);
+		if (recv(conn, (char*)&msg_lenght, sizeof(msg_lenght), NULL) == SOCKET_ERROR) {
+			std::cout << "User" << conn << " disconnected\n";
+			std::lock_guard<std::mutex> lock(mtx);
+			closesocket(conn);
+			connections.erase(std::find(connections.begin(), connections.end(), conn));
+			return;
+		}
 
 		char* msg = new char[msg_lenght + 1];
 		msg[msg_lenght] = '\0';
 
-		recv(connections[index], msg, msg_lenght + 1, NULL);
-		
-		std::string sender = "user" + std::to_string(connections[index]);
+		recv(conn, msg, msg_lenght + 1, NULL);
+
+		std::string sender = "user" + std::to_string(conn);
 		sender_lenght = sender.size();
 
-		for (size_t i = 0; i < curr_connections; ++i) {
-			if (i == index)
-				continue;
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			for (SOCKET curr_conn : connections) {
+				if (curr_conn == conn)
+					continue;
 
-			send(connections[i], (char *)&sender_lenght, sizeof(sender_lenght), NULL);
-			send(connections[i], sender.c_str(), sender_lenght, NULL);
+				send(curr_conn, (char*)&sender_lenght, sizeof(sender_lenght), NULL);
+				send(curr_conn, sender.c_str(), sender_lenght, NULL);
 
-			send(connections[i], (char *)&msg_lenght, sizeof(msg_lenght), NULL);
-			send(connections[i], msg, msg_lenght, NULL);
+				send(curr_conn, (char*)&msg_lenght, sizeof(msg_lenght), NULL);
+				send(curr_conn, msg, msg_lenght, NULL);
+			}
 		}
 
 		delete[] msg;

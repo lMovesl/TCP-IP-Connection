@@ -1,8 +1,5 @@
 ﻿#include "Client.h"
 
-void Error_message(const char* nameFunction);
-void Client_handler();
-
 SOCKET connection;
 
 int main(int argc, char* arcv[])
@@ -48,8 +45,8 @@ int main(int argc, char* arcv[])
 	return 0;
 }
 
-void Error_message(const char* nameFunction) {
-	std::cout << nameFunction << " function failed with error = " << WSAGetLastError() << std::endl;
+void Error_message(const char* name_function) {
+	std::cout << name_function << " function failed with error = " << WSAGetLastError() << std::endl;
 	WSACleanup();
 	exit(EXIT_FAILURE);
 }
@@ -73,6 +70,7 @@ void Client_handler() {
 		 
 		std::cout << sender << ": " << msg << "\n";
 
+		delete[] sender;
 		delete[] msg;
 	}
 }
